@@ -1,0 +1,50 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "claudio"
+version = "0.1.0"
+description = "Spoken notifications for Claude Code on macOS - hear which session needs you and what it actually wants"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "claudio contributors" }]
+keywords = ["claude", "claude-code", "tts", "notifications", "macos", "accessibility"]
+classifiers = [
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: MacOS :: MacOS X",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Multimedia :: Sound/Audio :: Speech",
+]
+dependencies = [
+  "edge-tts>=6.1.9",
+  "tomli-w>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "ruff>=0.6"]
+
+[project.urls]
+Homepage = "https://github.com/AzhirAhmadi/claudio"
+Issues = "https://github.com/AzhirAhmadi/claudio/issues"
+
+[project.scripts]
+claudio = "claudio.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/claudio"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
