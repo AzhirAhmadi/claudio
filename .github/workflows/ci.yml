@@ -31,6 +31,10 @@ jobs:
       - name: Test
         run: uv run pytest -q
 
+      - name: Formula resources are up to date
+        if: matrix.python-version == '3.13'
+        run: uv run python scripts/update_formula_resources.py --check
+
       - name: Smoke test the CLI
         run: |
           uv run claudio --version

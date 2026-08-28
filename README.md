@@ -17,8 +17,22 @@ call — which file, which command, which agent — and says that instead.
 ## Install
 
 ```bash
-brew install AzhirAhmadi/claudio/claudio && claudio setup
+brew tap AzhirAhmadi/claudio https://github.com/AzhirAhmadi/claudio
+brew trust azhirahmadi/claudio
+brew install claudio
+claudio setup
 ```
+
+Three details that will otherwise bite you:
+
+- **The explicit URL is required.** This repo is `claudio`, not `homebrew-claudio`, so
+  the `brew install owner/tap/formula` shorthand cannot find it — Homebrew turns that
+  shorthand into `github.com/owner/homebrew-<tap>` and fails with a confusing
+  `could not read Username for 'https://github.com'`, which really means *no such repo*.
+- **`brew trust` is needed once.** Recent Homebrew refuses to load formulae from
+  third-party taps until you trust them.
+- **Before the first tagged release**, use `brew install --HEAD claudio` — the stable
+  URL points at a tag that does not exist yet.
 
 `setup` writes a documented config, wires the Claude Code hooks, verifies
 everything, and **asks which voice engine you want** — because the better-sounding
@@ -240,6 +254,28 @@ scans every file on each test run and fails on employer names, internal domain
 vocabulary, ticket IDs, real email addresses, and anything shaped like a
 credential — API keys, tokens, JWTs, private keys, database URLs with passwords.
 Every example in the docs and tests is invented.
+
+## Releasing (maintainer notes)
+
+The Homebrew formula vendors every dependency, so it needs the full transitive
+closure with a checksum each — 14 packages, not the 2 in `pyproject.toml`.
+Never hand-edit those blocks:
+
+```bash
+python3 scripts/update_formula_resources.py          # regenerate from pyproject
+python3 scripts/update_formula_resources.py --check  # CI: fail if stale
+```
+
+Cutting a release is one command. It runs the checks, bumps the version, tags,
+pushes, then hashes the tarball GitHub generates and writes that into the formula —
+in that order, because the archive checksum cannot exist before the tag does:
+
+```bash
+scripts/release.sh 0.1.0
+```
+
+Before the first release, `brew install --HEAD claudio` builds straight from `main`
+and needs no tarball checksum.
 
 ## Requirements
 
