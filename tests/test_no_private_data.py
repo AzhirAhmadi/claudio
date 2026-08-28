@@ -86,22 +86,20 @@ def test_owner_handle_appears_only_in_repository_urls(path: Path):
     """The owner's name is fine in their own URLs, nowhere else."""
     if path.name == Path(__file__).name:
         pytest.skip("this file necessarily contains the handle")
+    # The handle is legitimate only as part of an `owner/claudio` identifier: a
+    # git URL, a Homebrew tap (owner/claudio) or formula (owner/claudio/claudio).
+    # Strip every such reference; anything left is the handle loose in prose.
+    identifier = re.compile(rf"(?:(?:github\.com|githubusercontent\.com)[:/])?"
+                            rf"{OWNER}/claudio(?:/claudio)?(?:\.git)?", re.I)
     stray = []
     for number, line in enumerate(path.read_text(errors="replace").splitlines(), 1):
         if OWNER not in line.lower():
             continue
-        if re.search(rf"(github\.com[:/]|githubusercontent\.com/){OWNER}/claudio",
-                     line, re.I):
-            continue
-        if re.search(rf'^\s*(REPO|TAP)="{OWNER}/claudio"', line, re.I):
-            continue
-        # Homebrew tap references: brew install <owner>/claudio/claudio
-        if re.search(rf"brew (install|tap) {OWNER}/claudio", line, re.I):
-            continue
-        stray.append(number)
+        if OWNER in identifier.sub("", line).lower():
+            stray.append(number)
     assert not stray, (
-        f"{path.relative_to(ROOT)} mentions the owner handle outside a repository "
-        f"URL at line(s) {stray}. Keep identity out of prose and examples."
+        f"{path.relative_to(ROOT)} mentions the owner handle outside an "
+        f"owner/claudio identifier at line(s) {stray}. Keep identity out of prose."
     )
 
 

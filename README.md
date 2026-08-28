@@ -16,23 +16,72 @@ call — which file, which command, which agent — and says that instead.
 
 ## Install
 
+### Homebrew
+
 ```bash
 brew tap AzhirAhmadi/claudio https://github.com/AzhirAhmadi/claudio
-brew trust azhirahmadi/claudio
-brew install claudio
+brew trust --formula azhirahmadi/claudio/claudio
+brew install --HEAD claudio
 claudio setup
 ```
 
-Three details that will otherwise bite you:
+Three things about those commands, because each one is surprising:
 
-- **The explicit URL is required.** This repo is `claudio`, not `homebrew-claudio`, so
-  the `brew install owner/tap/formula` shorthand cannot find it — Homebrew turns that
-  shorthand into `github.com/owner/homebrew-<tap>` and fails with a confusing
-  `could not read Username for 'https://github.com'`, which really means *no such repo*.
-- **`brew trust` is needed once.** Recent Homebrew refuses to load formulae from
-  third-party taps until you trust them.
-- **Before the first tagged release**, use `brew install --HEAD claudio` — the stable
-  URL points at a tag that does not exist yet.
+**The explicit URL is required.** This repo is `claudio`, not `homebrew-claudio`. The
+familiar `brew install owner/tap/formula` shorthand expands to
+`github.com/owner/homebrew-<tap>`, doesn't find it, and fails with
+`could not read Username for 'https://github.com'` — which sounds like an
+authentication problem but actually means *no such repository*.
+
+**`brew trust` is required, and I cannot remove it for you.** See below.
+
+**`--HEAD` builds from `main`.** Drop it once a tagged release exists.
+
+### Why you have to trust this tap
+
+`claudio` is not in **homebrew-core**, Homebrew's official formula repository. Only
+official taps are trusted automatically; every third-party tap must be trusted
+explicitly by whoever installs it.
+
+That is deliberate, and it is a good thing. A formula is arbitrary Ruby that runs on
+your machine, so the decision to run mine belongs to you, not to me. There is no
+signature, subscription, attestation or allowlist an author can use to pre-trust
+their own tap — if there were, any malicious tap would just tick that box and the
+check would be worthless.
+
+Getting into homebrew-core would remove the step, but it has a notability bar:
+**≥75 stars, or ≥30 forks, or ≥30 watchers.** Homebrew calls the guideline flexible,
+existing mainly *"to keep out freshly minted (and likely soon abandoned) pet
+projects"* — which, today, is a fair description of this one. If it earns a following,
+the step goes away.
+
+**What am I actually trusting?** One repository — not a GitHub account.
+
+| Command | Scope |
+|---|---|
+| `brew trust --formula azhirahmadi/claudio/claudio` | this one formula file, and nothing else |
+| `brew trust azhirahmadi/claudio` | everything in this one repo, including anything added to it later |
+
+Neither grants anything to my other repositories; a second project would be a
+separate tap needing its own decision. The record lives in
+`~/.config/homebrew/trust.json` (or `~/.homebrew/trust.json`) as four plain lists, and
+`brew trust --json v1` prints it. The per-formula form is narrower and is what
+Homebrew itself recommends, so it is what's above.
+
+Do not reach for `HOMEBREW_NO_REQUIRE_TAP_TRUST=1`. It disables the check globally for
+every tap you will ever install, the docs mark it not recommended, and it is slated
+for removal.
+
+### Without Homebrew, and without any trust step
+
+Python's own tooling has no trust gate, so this works today and skips the whole topic:
+
+```bash
+uv tool install git+https://github.com/AzhirAhmadi/claudio
+claudio setup
+```
+
+### Then
 
 `setup` writes a documented config, wires the Claude Code hooks, verifies
 everything, and **asks which voice engine you want** — because the better-sounding
@@ -40,16 +89,6 @@ one sends text to Microsoft, and you should decide that with the facts in front 
 you, not discover it later. See [Privacy](#privacy--read-this-if-you-use-claude-code-at-work).
 
 Then restart Claude Code. No API key, no account, nothing to paste.
-
-<details>
-<summary>Without Homebrew</summary>
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/AzhirAhmadi/claudio/main/install.sh | sh
-```
-
-Installs [uv](https://docs.astral.sh/uv/) if missing, then the tool, then runs setup.
-</details>
 
 ## What you hear
 
