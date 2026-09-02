@@ -16,6 +16,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+from . import pronounce
 from .config import Config, cache_dir
 
 BANNER_TIMEOUT = 5
@@ -68,6 +69,7 @@ def _edge_cli() -> list[str] | None:
 
 def speak(cfg: Config, text: str) -> str:
     """Start speaking and return the engine actually used. Never blocks on audio."""
+    text = pronounce.apply(text, cfg.pronounce)
     engine = str(cfg.get("speech", "engine")).lower()
     if engine == "edge" and _speak_edge(cfg, text):
         return "edge"

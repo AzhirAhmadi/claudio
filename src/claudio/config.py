@@ -117,6 +117,26 @@ say = "{session}: {description}"
 [[rule]]
 tool = "Edit"
 say = "{session}: {phrase}"
+
+# ---------------------------------------------------------------------------
+# Pronunciation: respell words the voice mangles.
+#
+# The neural "Multilingual" voices take no language parameter - they guess the
+# language of each word from its spelling, so an isolated German noun in an
+# English sentence can be detected as French and spoken that way. There is no
+# way to tell the endpoint otherwise (edge-tts escapes the text and fixes
+# xml:lang to en-US), but we can change the spelling before sending it.
+#
+# Left side: the word as it appears. Right side: how to say it.
+# Matching is whole-word and case-insensitive. Only speech is affected - the
+# notification banner still shows the real word.
+#
+# Check what fires:  claudio pronounce "your text here"
+# ---------------------------------------------------------------------------
+
+[pronounce]
+# Bestellung = "Be-shtell-ung"
+# Rechnung = "Rekh-nung"
 """
 
 
@@ -138,6 +158,7 @@ class Config:
     notify: dict[str, Any] = field(default_factory=dict)
     session: dict[str, Any] = field(default_factory=dict)
     rules: list[Rule] = field(default_factory=list)
+    pronounce: dict[str, str] = field(default_factory=dict)
     path: Path | None = None
 
     def get(self, section: str, key: str) -> Any:
@@ -158,6 +179,8 @@ class Config:
             "notify": {**DEFAULTS["notify"], **self.notify},
             "session": {**DEFAULTS["session"], **self.session},
         }
+        if self.pronounce:
+            payload["pronounce"] = dict(self.pronounce)
         if self.rules:
             payload["rule"] = [
                 {k: v for k, v in
@@ -183,11 +206,17 @@ def load(path: Path | None = None) -> Config:
         for entry in raw.get("rule", []) or []
         if isinstance(entry, dict)
     ]
+    pronounce = {
+        str(word): str(spoken)
+        for word, spoken in (raw.get("pronounce", {}) or {}).items()
+        if str(word).strip()
+    }
     return Config(
         speech=raw.get("speech", {}) or {},
         notify=raw.get("notify", {}) or {},
         session=raw.get("session", {}) or {},
         rules=rules,
+        pronounce=pronounce,
         path=target,
     )
 

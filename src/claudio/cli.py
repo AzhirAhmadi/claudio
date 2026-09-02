@@ -10,6 +10,7 @@ import time
 
 from . import config as configmod
 from . import consent, engines, hooks, voices
+from . import pronounce as pronouncemod
 from . import setup as setupmod
 from .describe import describe
 
@@ -227,6 +228,33 @@ def cmd_demo(args) -> int:
     return 0
 
 
+def cmd_pronounce(args) -> int:
+    """Show the respelling table, or what it would do to a line of text."""
+    cfg = configmod.load()
+    table = cfg.pronounce
+    if not args.text:
+        if not table:
+            print("no [pronounce] entries yet. Add them to "
+                  f"{configmod.config_path()}:\n\n"
+                  '  [pronounce]\n  Bestellung = "Be-shtell-ung"')
+            return 0
+        width = max(len(w) for w in table)
+        for word, spoken in sorted(table.items()):
+            print(f"  {word:<{width}}  ->  {spoken}")
+        return 0
+
+    text = " ".join(args.text)
+    hits = pronouncemod.preview(text, table)
+    spoken = pronouncemod.apply(text, table)
+    print(f"  written: {text}")
+    print(f"  spoken : {spoken}")
+    if hits:
+        print("  applied: " + ", ".join(f"{found} -> {rep}" for found, rep in hits))
+    else:
+        print("  applied: nothing matched")
+    return 0
+
+
 def cmd_config(args) -> int:
     path = configmod.config_path()
     if args.path:
@@ -331,6 +359,10 @@ def build_parser() -> argparse.ArgumentParser:
     item.add_argument("text", nargs="*")
     item.add_argument("--local", action="store_true", help="audition macOS voices")
     item.add_argument("--only", action="append", help="audition just this voice (repeatable)")
+
+    item = add("pronounce", cmd_pronounce,
+               "show the respelling table, or test it on some text")
+    item.add_argument("text", nargs="*")
 
     item = add("config", cmd_config, "show the config file")
     item.add_argument("--path", action="store_true", help="print the path only")

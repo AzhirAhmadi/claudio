@@ -147,6 +147,39 @@ space:
 Then `claudio demo --local`. Siri's voices can't be used: macOS doesn't expose them
 to `say(1)`, even though the assets are on disk.
 
+## Pronunciation — when a word comes out wrong
+
+The neural `Multilingual` voices take **no language parameter**. They detect the
+language of each span from its spelling alone, so an isolated German noun inside an
+English sentence can be detected as *French* and spoken with French phonology.
+
+There is no way to correct that through the engine. Microsoft's SSML has a `<lang>`
+element for exactly this, but `edge-tts` XML-escapes the text and hardcodes
+`xml:lang='en-US'`, so no markup reaches the endpoint — an injected tag would simply
+be read aloud.
+
+What you can change is the spelling. Respell the word and the detector never sees a
+foreign spelling to misjudge:
+
+```toml
+[pronounce]
+Bestellung = "Be-shtell-ung"
+Rechnung   = "Rekh-nung"
+```
+
+Whole-word and case-insensitive. **Only speech is rewritten** — the notification
+banner keeps the real word, so what you read stays accurate. Works on the local
+engine too.
+
+```bash
+claudio pronounce                          # list the table
+claudio pronounce "edit Bestellung now"    # see what would fire
+```
+
+The blunter alternative: drop `Multilingual` from the voice name.
+`claudio voice en-US-AvaNeural` disables language detection entirely — foreign words
+get English phonology, imperfect but consistent, and never French.
+
 ## Rules — control what gets said
 
 Out of the box a permission request already describes itself. Rules let you reword
