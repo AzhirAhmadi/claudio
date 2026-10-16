@@ -17,6 +17,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import ssl
 import subprocess
 import sys
 import urllib.request
@@ -53,10 +54,20 @@ def resolve(requirements: list[str]) -> list[tuple[str, str]]:
     return sorted(pinned)
 
 
+def _ssl_context() -> ssl.SSLContext:
+    """Some macOS Python builds ship no CA bundle; borrow certifi's when present."""
+    try:
+        import certifi
+
+        return ssl.create_default_context(cafile=certifi.where())
+    except ImportError:
+        return ssl.create_default_context()
+
+
 def sdist(name: str, version: str) -> tuple[str, str]:
     """(url, sha256) of the source distribution on PyPI."""
     url = f"https://pypi.org/pypi/{name}/{version}/json"
-    with urllib.request.urlopen(url, timeout=30) as response:
+    with urllib.request.urlopen(url, timeout=30, context=_ssl_context()) as response:
         payload = json.load(response)
     for entry in payload["urls"]:
         if entry["packagetype"] == "sdist":

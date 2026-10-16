@@ -11,6 +11,7 @@ from __future__ import annotations
 import contextlib
 import json
 import os
+import shlex
 import shutil
 import subprocess
 import sys
@@ -93,18 +94,24 @@ def _speak_edge(cfg: Config, text: str) -> bool:
 
     # `exec afplay` replaces the shell on success, so the say(1) line below is
     # reached only when synthesis failed - offline, DNS down, bad voice name.
-    quoted = " ".join(f"'{part}'" for part in cli)
-    fallback = " ".join(f"'{part}'" for part in
-                        say_argv(cfg, "$3", str(cfg.get("speech", "fallback_voice"))))
+    #
+    # Every value is a positional parameter. Nothing that varies is spliced into
+    # the script text: a previous version built the fallback by quoting
+    # say_argv(cfg, "$3", ...) part by part, and single quotes stop sh expanding
+    # $3, so the fallback literally said "$3" out loud.
+    quoted = " ".join(shlex.quote(part) for part in cli)
     script = (
         f'{quoted} --voice "$1" --rate "$2" --text "$3" --write-media "$4" '
         f'>/dev/null 2>&1 && [ -s "$4" ] && exec afplay -v "$5" "$4"\n'
-        f'exec {fallback}'
+        f'exec say -v "$6" -r "$7" "$8"'
     )
     try:
         subprocess.Popen(
             ["/bin/sh", "-c", script, "sh",
-             str(cfg.get("speech", "voice")), rate, text, out, f"{volume:.2f}"],
+             str(cfg.get("speech", "voice")), rate, text, out, f"{volume:.2f}",
+             str(cfg.get("speech", "fallback_voice")),
+             str(int(cfg.get("speech", "rate"))),
+             f"[[volm {volume:.2f}]] {text}"],
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
         )
     except (OSError, subprocess.SubprocessError):

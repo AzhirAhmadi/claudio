@@ -168,3 +168,43 @@ def test_pronounce_says_when_nothing_matched(capsys):
     configmod.config_path().write_text('[pronounce]\nFoo = "bar"\n')
     main(["pronounce", "hello world"])
     assert "nothing matched" in capsys.readouterr().out
+
+
+# --------------------------------------------------------------------------- #
+# regression: the fallback must speak the text, not a shell variable
+# --------------------------------------------------------------------------- #
+
+def test_edge_fallback_passes_the_real_text_to_say(tmp_path, monkeypatch):
+    """The offline fallback once said "$3" out loud.
+
+    The say(1) command was built by single-quoting every argument, and sh does
+    not expand $3 inside single quotes, so the literal two characters were
+    spoken. Nothing that varies may be spliced into the script text: assert the
+    message appears as a positional argument instead.
+    """
+    from claudio import engines
+
+    captured = {}
+
+    class FakePopen:
+        def __init__(self, argv, **kwargs):
+            captured["argv"] = argv
+
+    monkeypatch.setattr(engines.subprocess, "Popen", FakePopen)
+    monkeypatch.setattr(engines, "_edge_cli", lambda: ["/fake/edge-tts"])
+
+    cfg = configmod.load()
+    cfg.speech.update({"engine": "edge", "voice": "en-US-AvaNeural",
+                       "fallback_voice": "Samantha", "rate": 190, "volume": 0.6})
+    assert engines._speak_edge(cfg, "the actual message") is True
+
+    argv = captured["argv"]
+    script = argv[2]
+    positionals = argv[3:]
+
+    assert "$3" not in script.split("\n")[1], "fallback must not inline $3 under quotes"
+    assert "the actual message" not in script, "text must not be spliced into the script"
+    assert any("the actual message" in str(p) for p in positionals), \
+        "the message must reach say(1) as a positional argument"
+    assert any(str(p).startswith("[[volm") and "the actual message" in str(p)
+               for p in positionals), "the spoken argument must carry the real text"
